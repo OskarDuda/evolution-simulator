@@ -5,10 +5,9 @@ TILE_TYPES = []
 class Tile_type:
     def __init__(self, id='', plants_inc=0.0, meat_inc=0.0, temperature=0.0):
         if not id:
-                self.id = 'Custom_Tile'+str(len(TILE_TYPES)+1) #ID speaks for itself
+            self.id = 'Custom_Tile'+str(len(TILE_TYPES)+1) #ID speaks for itself
         else:
             self.id = id
-            
         self.plants_income = plants_inc #How fast plants grow on this tile type
         self.meat_income = meat_inc #How much meat is regurarly generated on this tile type
         self.temperature = temperature #Temperature of the tile type affects animals living here
@@ -21,6 +20,9 @@ class Tile:
         self.meat = meat
         self.x = x
         self.y = y
+        self.packs = []
+    def __repr__(self):
+        return 'A tile of {}, with {} edible plants and {} meat'.format(self.tile_type.id,self.plants,self.meat)
         
 class Map:
     def __init__(self,x_size,y_size,f):
@@ -28,8 +30,16 @@ class Map:
         self.y_size = y_size
         self.tilemap = self.generate_tilemap(x_size, y_size,f)
         
+        
+        
     def generate_tilemap(self, x_size, y_size, f):
         return f(x_size, y_size)
+    
+    def generate_food(self):
+        for mx in self.tilemap:
+            for m in mx:
+                m.plants += m.tile_type.plants_income
+                m.meat += m.tile_type.meat_income
     
 
 def geographic_tilemap_generator_by_temp(y_size, x_size):
@@ -63,3 +73,4 @@ t1 = Tile_type(id='meadows', plants_inc=0.3, meat_inc=0.1, temperature=25.0)
 t1 = Tile_type(id='polar', temperature=-10.0)
 t1 = Tile_type(id='tundra', plants_inc=0.1, temperature=-10.0)
 
+M = Map(100,100,geographic_tilemap_generator_by_temp)

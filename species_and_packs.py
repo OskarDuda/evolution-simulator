@@ -1,11 +1,12 @@
 import numpy as np
 import genetic as gen
+from maps_and_tiles import *
 
 DICE = 20
 VORES = ['Carnivore', 'Omnivore', 'Herbivore']
 FUR = ['None','Short','Long']
 CATEGORY_TRANSLATOR = {'fur':FUR,'food':VORES}
-NOTIFICATIONS = True
+NOTIFICATIONS = False
 BREEDING_PACE = 5
 CROSS_BIG_CONST = 3
 CROSS_SMALL_CONST = 0.35 #has to be in range 0:1
@@ -24,7 +25,7 @@ class Species:
         SPECIES_LIST.append(self)
         
     def __repr__(self):
-        return 'Species of {}, generation number {}, with {} representatives'.format(self.name,self.generation,len(self.packs_list))
+        return 'Species of {}, generation number {}, with {} representative groups'.format(self.name,self.generation,len(self.packs_list))
         
     
     def make_pck_names(self):
@@ -50,12 +51,14 @@ class Species:
         
         def f_small(v): #function for crossover of attributes from range 0:1
             i = 0
-            r = []
+            r = np.zeros(len(v))
             while i < len(v):
+                print('Iteration number {}'.format(i))
                 tmp = gen.crossover(v[i-1],v[i],CROSS_SMALL_CONST)
                 r[i-1] = tmp[0]
                 r[i] = tmp[1]
-            return r
+                i += 1
+            return list(r)
         
         d = {} #creating dictionary of all attribute values of all packs in the species - syntax is {'attr_name':[pack1.value,pack2_value,...],...}
         for attr in self.pack_attributes_names:
@@ -130,6 +133,7 @@ class Species:
             for key in new_values:
                 setattr(pck, key, new_values[key][i])
             i+=1
+            pck.starting_population = int(pck.starting_population)
             pck.population = pck.starting_population
             
         self.generation += 1
@@ -150,8 +154,8 @@ class Pack:
         else:
             self.id = id
         self.food = VORES[food] #Type of food the pack eats
-        self.starting_population = pop #Number of animals in the pack in the beginning
-        self.population = pop #Number of animals in the pack
+        self.starting_population = int(pop) #Number of animals in the pack in the beginning
+        self.population = self.starting_population #Number of animals in the pack
         self.fur = FUR[fur] #Fur length of animals in the pack
         if aggressiveness > 1.0:
             self.aggressiveness = 1.0 #0% - 100% chance of attacking those entering this pack's territory
@@ -168,15 +172,33 @@ class Pack:
         self.food_intake = 0 #How much food does the whole pack need to survive
         self.count_food_intake()
         self.alive = True #Tells if the pack is alive
+        M.tilemap[self.x][self.y].packs.append(self)
         
         sp.packs_list.append(self)
     
+    def __repr__(self):
+        return 'A pack of {} {}, at x:{} y:{}, generation:{}'.format(self.population,self.species.name,self.x,self.y,self.species.generation)
+    
     def move(self, dx, dy):
-        self.x += dx
-        self.y += dy
+        if self.x+dx>=0  and self.x+dx<M.x_size and self.y+dy>=0 and self.y+dy<M.y_size:
+            M.tilemap[self.x][self.y].packs.remove(self)
+            self.x += dx
+            self.y += dy
+            M.tilemap[self.x][self.y].packs.append(self)
+            for pack in M.tilemap[self.x][self.y].packs:
+                self.fight_or_flight(pack,NOTIFICATIONS)
+        else:
+            pass
+    
+    def decide_movement(self):
+#        r = self.territory_size
+#        tmp = [list(range(-r:r+1)+self.x*np.ones(d)),list(range(-r:r+1)+self.y*np.ones(d))]
+#        max_food = max(np.array(M.tilemap)[np.ix_(tmp)])
+        self.move(np.random.randint(3),np.random.randint(3))
+            
         
     def fight(self, p, print_output=False):
-        self_throws = np.random.randint(DICE, size = self.population*self.size)
+        self_throws = np.random.randint(DICE, size = self.population*int(self.size))
         defenders_throws = np.random.randint(DICE, size = p.population*p.size)
         
         dp = len(defenders_throws[defenders_throws == DICE - 1])
@@ -190,7 +212,8 @@ class Pack:
             print('Group {} lost {} members'.format(p.id,dp ))
         p.change_population(-dp)
        
-    def freeze(self, temperature):
+    def freeze(self):
+        temperature = M.tilemap[self.x][self.y].tile_type.temperature
         freeze_throw = np.random.rand(self.population)
         if self.fur == FUR[0] and temperature < FREEZE_TEMPS[0]:
             self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
@@ -200,14 +223,14 @@ class Pack:
             self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
             
     
-    def fight_or_flight(self, p, print_output=False):
+    def fight_or_flight(self, pack, print_output=False):
         decision_throw = np.random.rand()
         if self.aggressiveness == 0.0:
             pass
         elif decision_throw <= self.aggressiveness:
             if print_output:
-                print('Group {} attacks group {}'.format(self.id, p.id))
-            self.fight(p,NOTIFICATIONS)
+                print('Group {} attacks group {}'.format(self.id, pack.id))
+            self.fight(pack,NOTIFICATIONS)
         elif print_output:
             print('Groups go in opposite directions')
             
@@ -220,8 +243,10 @@ class Pack:
         self.food_intake = self.population*self.size*fur_modifier
         
     def change_population(self, dp):
-        if not self.alive:
-            self.population += dp
+        if self.alive:
+            self.population += int(dp)
+            if dp < 0:
+                M.tilemap[self.x][self.y].meat += dp
             if self.population <= 0:
                 self.population = 0
                 self.die()
@@ -233,15 +258,30 @@ class Pack:
             self.satiety = 0
             
     
-    def eat(self, amount):
-        self.satiety += amount
-        if self.satiety > BREEDING_PACE*self.size:
-            self.population += 1
-            self.satiety = BREEDING_PACE*self.size
+    def eat(self):
+        if self.food == VORES[0]:
+            meat_eaten = min(self.food_intake,M.tilemap[self.x][self.y].meat)
+            eaten = meat_eaten
+        elif self.food == VORES[1]:
+            plants_eaten = min(self.food_intake,M.tilemap[self.x][self.y].plants)
+            M.tilemap[self.x][self.y].plants -= plants_eaten
+            if plants_eaten < self.food_intake:
+                meat_eaten = self.food_intake-plants_eaten
+                M.tilemap[self.x][self.y].meat -= meat_eaten
+                eaten = plants_eaten+meat_eaten
+            else:
+                eaten = plants_eaten
+        elif self.food == VORES[2]:
+            plants_eaten = M.tilemap[self.x][self.y].plants
+            M.tilemap[self.x][self.y].plants -= plants_eaten
+            eaten = plants_eaten
+        else:
+            eaten = 0
+        self.satiety += eaten
+        
     
     def die(self):
         self.alive = False
-        M.tilemap()
         print('Pack {} died'.format(self.id))
          
 #sp1 = Species('dogs')
