@@ -147,7 +147,7 @@ class Species:
         
     
 class Pack:
-    def __init__(self, sp, id='', food=0, pop=1, fur=0, aggressiveness=0, satiety=0.0, size=1, territory_size=1, x=0, y=0):
+    def __init__(self, sp, id='', food=0, pop=1, fur=0, aggressiveness=0, satiety=0.0, size=1, territory_size=1, x=0, y=0, indicator='g*'):
         self.species = sp #Species of animals in the pack
         if not id:
             self.id = sp.name+str(len(sp.packs_list)+1) #ID speaks for itself
@@ -167,12 +167,23 @@ class Pack:
         self.satiety = satiety #How full are the packs members stomachs
         self.size = size #How big are the animals in the pack
         self.territory_size = territory_size #How big area do the pack perceives as its own
-        self.x = x #X location of the pack
-        self.y = y #Y location of the pack
+        
+        #X location of the pack
+        if x > M.x_size: 
+            self.x = M.x_size
+        else:
+            self.x = x
+        #Y location of the pack
+        if y > M.y_size: 
+            self.y = M.y_size
+        else:
+            self.y = y
+            
         self.food_intake = 0 #How much food does the whole pack need to survive
         self.count_food_intake()
         self.alive = True #Tells if the pack is alive
         M.tilemap[self.x][self.y].packs.append(self)
+        self.indicator='g*' #FOR FUTURE IMPLEMENTATION how the pack is indicated on the map
         
         sp.packs_list.append(self)
     
@@ -194,7 +205,7 @@ class Pack:
 #        r = self.territory_size
 #        tmp = [list(range(-r:r+1)+self.x*np.ones(d)),list(range(-r:r+1)+self.y*np.ones(d))]
 #        max_food = max(np.array(M.tilemap)[np.ix_(tmp)])
-        self.move(np.random.randint(3),np.random.randint(3))
+        self.move(np.random.randint(5)-2,np.random.randint(5)-2)
             
         
     def fight(self, p, print_output=False):
@@ -281,8 +292,9 @@ class Pack:
         
     
     def die(self):
+        if NOTIFICATIONS:
+            print('Pack {} died'.format(self.id))
         self.alive = False
-        print('Pack {} died'.format(self.id))
          
 #sp1 = Species('dogs')
 #p11 = Pack(sp1, id='', food=0, pop=5, fur=2, size=4, aggressiveness=0.6, satiety=0)

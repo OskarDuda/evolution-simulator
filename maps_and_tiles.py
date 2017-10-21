@@ -42,7 +42,7 @@ class Map:
                 m.meat += m.tile_type.meat_income
     
 
-def geographic_tilemap_generator_by_temp(y_size, x_size):
+def geographic_tilemap_generator_by_temp(x_size, y_size):
     a = []
     for t in TILE_TYPES:
         a.append(t.temperature) 
@@ -73,4 +73,4 @@ t1 = Tile_type(id='meadows', plants_inc=0.3, meat_inc=0.1, temperature=25.0)
 t1 = Tile_type(id='polar', temperature=-10.0)
 t1 = Tile_type(id='tundra', plants_inc=0.1, temperature=-10.0)
 
-M = Map(100,100,geographic_tilemap_generator_by_temp)
+M = Map(300,200,geographic_tilemap_generator_by_temp)
