@@ -7,14 +7,16 @@ VORES = ['Carnivore', 'Omnivore', 'Herbivore']
 FUR = ['None','Short','Long']
 CATEGORY_TRANSLATOR = {'fur':FUR,'food':VORES}
 NOTIFICATIONS = False
-BREEDING_PACE = 5
-CROSS_BIG_CONST = 3
+BREEDING_PACE = 10
+CROSS_BIG_CONST = 3 #crossover constant for attributes which can be higher than 1
 CROSS_SMALL_CONST = 0.35 #has to be in range 0:1
-HIGH_MUTATION_CONST = 0.1 #mutation chance for highly mutable attributes like size
+HIGH_MUTATION_CONST = 0.2 #mutation chance for highly mutable attributes like size
 LOW_MUTATION_CONST = 0.001 #mutation chance for lowly mutable attributes like type of food
 SPECIES_LIST = []
 FREEZE_TEMPS = [25,5,-5]
-FREEZE_CHANCE = 0.3
+FREEZE_CHANCE = 0.1
+TMP = 0 #variable for debugging
+DEFAULT_PACK = { 'species':'Xarz', 'id':'', 'food':0, 'pop':1, 'fur':0, 'aggressiveness':0, 'satiety':0.0, 'size':1, 'territory_size':1, 'x':0, 'y':0, 'indicator':'g*'}
 
 class Species:
     def __init__(self, name):
@@ -39,7 +41,7 @@ class Species:
         survivors = [p for p in self.packs_list if p.alive]
         
         #crossover 
-        def f_big(v): #function for crossover of attributes that can get higher than 1.0
+        def f_big(v): #crossover of attributes that can get higher than 1.0
             i = 0
             r = np.zeros(len(v))
             while i < len(v):
@@ -49,11 +51,10 @@ class Species:
                 i += 1
             return list(r)
         
-        def f_small(v): #function for crossover of attributes from range 0:1
+        def f_small(v): #crossover of attributes from range 0:1
             i = 0
             r = np.zeros(len(v))
             while i < len(v):
-                print('Iteration number {}'.format(i))
                 tmp = gen.crossover(v[i-1],v[i],CROSS_SMALL_CONST)
                 r[i-1] = tmp[0]
                 r[i] = tmp[1]
@@ -68,15 +69,21 @@ class Species:
                 d[attr].append(getattr(pck,attr))
         
         new_values = {} #creates a similar dictionary to d, with new attribute values
-        for key in d:
-            if key in ['alive' , 'food', 'food_intake', 'fur', 'id', 'satiety', 'species', 'x', 'y']: #these are attributes that are not passed through genetics
-                new_values[key] = d[key]
-            elif type(d[key][0]) == int or (type(d[key][0]) == float and max(d[key]) >= 1): #these attributes can be higher than 1.0
-                new_values[key] = f_big(d[key])
-            elif type(d[key][0] == float): #these attributes are supposed to be from range 0:1
-                new_values[key] = f_small(d[key])
-            else:
-                new_values[key] = d[key] #for bug avoidance all attributes not listed above stay unchanged in the crossover phase
+        if d['x']:
+            for key in d:
+                print(d)
+                if key in ['alive' , 'food', 'food_intake', 'fur', 'id', 'satiety', 'species', 'x', 'y','indicator']: #these are attributes that are not passed through genetics
+                    new_values[key] = d[key]
+                elif type(d[key][0]) == int or (type(d[key][0]) == float and max(d[key]) >= 1): #these attributes can be higher than 1.0
+                    new_values[key] = f_big(d[key])
+                elif type(d[key][0] == float): #these attributes are supposed to be from range 0:1
+                    new_values[key] = f_small(d[key])
+                else:
+                    new_values[key] = d[key] #for bug avoidance all attributes not listed above stay unchanged in the crossover phase
+        else:
+            for key in sp1.pack_attributes_names:
+                d[key] = DEFAULT_PACK[key]
+            
             
         #mutation
         def mut_float(a, dev): #returns gaussian distribution of values with std deviation equal to dev, concentrated around value from a
@@ -126,13 +133,16 @@ class Species:
             elif new_values[key] in ['aggressiveness']:
                 new_values[key] = mut_float(new_values[key],HIGH_MUTATION_CONST)
         
-        
+                
+
         #new generation
-        i = 0            
         for pck in self.packs_list: #swaps attributes of old packs with new generation's attributes
+            i = 0
+            print(len(new_values))
             for key in new_values:
                 setattr(pck, key, new_values[key][i])
             i+=1
+            i = i%len(new_values)
             pck.starting_population = int(pck.starting_population)
             pck.population = pck.starting_population
             
@@ -192,7 +202,8 @@ class Pack:
     
     def move(self, dx, dy):
         if self.x+dx>=0  and self.x+dx<M.x_size and self.y+dy>=0 and self.y+dy<M.y_size:
-            M.tilemap[self.x][self.y].packs.remove(self)
+            if self in M.tilemap[self.x][self.y].packs:
+                M.tilemap[self.x][self.y].packs.remove(self)
             self.x += dx
             self.y += dy
             M.tilemap[self.x][self.y].packs.append(self)
@@ -205,12 +216,13 @@ class Pack:
 #        r = self.territory_size
 #        tmp = [list(range(-r:r+1)+self.x*np.ones(d)),list(range(-r:r+1)+self.y*np.ones(d))]
 #        max_food = max(np.array(M.tilemap)[np.ix_(tmp)])
-        self.move(np.random.randint(5)-2,np.random.randint(5)-2)
+        if self.alive:
+            self.move(np.random.randint(5)-2,np.random.randint(5)-2)
             
         
     def fight(self, p, print_output=False):
         self_throws = np.random.randint(DICE, size = self.population*int(self.size))
-        defenders_throws = np.random.randint(DICE, size = p.population*p.size)
+        defenders_throws = np.random.randint(DICE, size = int(p.population*p.size))
         
         dp = len(defenders_throws[defenders_throws == DICE - 1])
         if print_output:
@@ -277,7 +289,7 @@ class Pack:
             plants_eaten = min(self.food_intake,M.tilemap[self.x][self.y].plants)
             M.tilemap[self.x][self.y].plants -= plants_eaten
             if plants_eaten < self.food_intake:
-                meat_eaten = self.food_intake-plants_eaten
+                meat_eaten = min(self.food_intake-plants_eaten,M.tilemap[self.x][self.y].meat)
                 M.tilemap[self.x][self.y].meat -= meat_eaten
                 eaten = plants_eaten+meat_eaten
             else:
@@ -294,6 +306,7 @@ class Pack:
     def die(self):
         if NOTIFICATIONS:
             print('Pack {} died'.format(self.id))
+        self.indicator = 'k+'
         self.alive = False
          
 #sp1 = Species('dogs')
