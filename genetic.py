@@ -65,9 +65,4 @@ def mutate_cat(a,chance,category): #changes values in a into neighbouring value 
         else:
             return a
 
-v = ['carnivore','carnivore','herbivore','omnivore','herbivore']#,'omnivore','omnivore','carnivore','herbivore']
-ch = 0.3
-cat = ['carnivore','omnivore','herbivore']
-v_mut = mutate_cat(v,ch,cat)
-print(v_mut)
 #def selection FOR LATER IMPLEMENTATION

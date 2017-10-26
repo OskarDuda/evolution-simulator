@@ -81,9 +81,8 @@ while(True):
                 pack.get_hungry()
                 pack.freeze()
                 pack.eat()
-                plt.plot(pack.x, pack.y,pack.indicator)
-#                print(type(worgs[0].population))
-            
+                plt.plot(pack.x, pack.y,pack.indicator) 
+            species.count_survivors()
         
 #        fig = plt.plot(x_list,y_list,'k*')
         plt.imshow(M_temp, cmap='Oranges', interpolation = 'nearest')
@@ -96,10 +95,6 @@ while(True):
         
     for species in SPECIES_LIST:
         species.new_generation()
-#        tmp = []
-#        for pack in species.packs_list:
-#            tmp.append('x:'+str(pack.x)+', y:'+str(pack.y))
-#        print(tmp)
     print('Year {} ends'.format(year))
     year += 1
     

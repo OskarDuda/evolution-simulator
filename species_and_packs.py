@@ -32,8 +32,10 @@ class Species:
     def __init__(self, name):
         self.name = name
         self.packs_list = []
+        self.packs_id_list = [k.id for k in self.packs_list]
         self.generation = 1
         self.pack_attributes_names = self.make_pck_names()
+        self.survivors = [p for p in self.packs_list if p.alive]
         SPECIES_LIST.append(self)
         
     def __repr__(self):
@@ -45,24 +47,24 @@ class Species:
         self.packs_list.remove(tmp)
         return [a for a in dir(tmp) if (not a.startswith('__') and 
                                not callable(getattr(tmp,a)))]
-        
+    def count_survivors(self):
+        self.survivors = [p for p in self.packs_list if p.alive]
         
     def new_generation(self):
-        #selection (each pack that survived is selected once)
-        survivors = [p for p in self.packs_list if p.alive]
-        
+        #selection (each pack that survived is selected once)        
         #crossover 
         d = {} #creating dictionary of all attribute values of all packs in the species - syntax is {'attr_name':[pack1.value,pack2_value,...],...}
         for attr in self.pack_attributes_names:
               d[attr] = []
-        for pck in survivors:
+        for pck in self.survivors:
             for attr in self.pack_attributes_names:
                 d[attr].append(getattr(pck,attr))
-        
+        if d['id'][0] == d['id'][1]:
+            print('line 64')
+            
         new_values = {} #creates a similar dictionary to d, with new attribute values
         if d['x']: #checks if any pack has survived
             for key in d:
-#                print(d)
                 if key in ['alive', #these are attributes that are not modified through genetics
                            'food',
                            'food_intake',
@@ -73,7 +75,6 @@ class Species:
                            'x',
                            'y',
                            'indicator']: 
-                    print(d[key])
                     new_values[key] = d[key]
                 elif type(d[key][0]) == int or (type(d[key][0]) == float and max(d[key]) >= 1): #these attributes can be higher than 1.0
                     new_values[key] = gen.vector_crossover(d[key],CROSS_BIG_CONST)
@@ -84,6 +85,7 @@ class Species:
         else: #if no pack has survived, generate a default pack
             for key in sp1.pack_attributes_names:
                 new_values[key] = DEFAULT_PACK[key]
+            
             
             
         #mutation
@@ -104,17 +106,17 @@ class Species:
             for key in new_values:
                 setattr(pck, key, new_values[key][i])
             i+=1
-            i = i%len(new_values)
+            i = i%len(self.survivors)
             pck.starting_population = int(pck.starting_population)
             pck.population = pck.starting_population
             
         self.generation += 1
         
-    def new_food(self, survivors):
-        food_translator = {'Carnivore':0, 'Omnivore':1, 'Herbivore':2}
-        v=[]
-        for s in survivors:
-            v.append(food_translator(s.food))
+#    def new_food(self, survivors):
+#        food_translator = {'Carnivore':0, 'Omnivore':1, 'Herbivore':2}
+#        v=[]
+#        for s in survivors:
+#            v.append(food_translator(s.food))
         
         
 # A pack is a representative of a certain species    
@@ -125,6 +127,9 @@ class Pack:
         self.species = sp #Species of animals in the pack
         if not id:
             self.id = sp.name+str(len(sp.packs_list)+1) #ID speaks for itself
+        elif id in sp.packs_id_list:
+            print('This ID is already in use! ')
+            return
         else:
             self.id = id
         self.food = VORES[food] #Type of food the pack eats
