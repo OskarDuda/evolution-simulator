@@ -105,8 +105,15 @@ class Species:
                 setattr(pck, key, new_values[key][i])
             i+=1
             i = i%len(self.survivors)
+            #a little utillity
+            pck.size = int(pck.size)
+            if pck.size < 1:
+                pck.size = 1
             pck.starting_population = int(pck.starting_population)
+            if pck.starting_population < 1:
+                pck.starting_population = 1
             pck.population = pck.starting_population
+            
             
         self.generation += 1
         
@@ -141,9 +148,14 @@ class Pack:
         else:
             self.aggressiveness = aggressiveness
         
-        self.satiety = satiety #How full are the packs members stomachs
-        self.size = size #How big are the animals in the pack
-        self.territory_size = territory_size #How big area do the pack perceives as its own
+        self.satiety = satiety #How full are the packs members' stomachs
+        
+        if size >= 1:
+            self.size = size #How big are the animals in the pack
+        else:
+            self.size = 1
+            
+        self.territory_size = territory_size #How big area does the pack perceive as its own
         
         #X location of the pack
         if x > M.x_size: 

@@ -100,6 +100,9 @@ while(True):
     for species in SPECIES_LIST:
         species.new_generation()
     print('Year {} ends'.format(year))
+    if year < 1:
+        v_statistics=[]
+        
     year += 1
     
         
