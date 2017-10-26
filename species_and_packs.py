@@ -2,7 +2,7 @@ import numpy as np
 import genetic as gen
 from maps_and_tiles import *
 
-DICE = 6
+DICE = 15
 VORES = ['Carnivore', 'Omnivore', 'Herbivore']
 FUR = ['None','Short','Long']
 CATEGORY_TRANSLATOR = {'fur':FUR,'food':VORES}
@@ -192,8 +192,10 @@ class Pack:
             self.x += dx
             self.y += dy
             M.tilemap[self.x][self.y].packs.append(self)
-            for pack in M.tilemap[self.x][self.y].packs:
-                self.fight_or_flight(pack,NOTIFICATIONS)
+            for xx in range(max(self.x-int(self.territory_size/2),0),min(self.x+int(self.territory_size/2),M.x_size)):
+                for yy in range(max(self.y-int(self.territory_size/2),0),min(self.y+int(self.territory_size/2),M.y_size)):
+                    for pack in M.tilemap[xx][yy].packs:
+                        self.fight_or_flight(pack,NOTIFICATIONS)
         else:
             pass
     
@@ -203,8 +205,7 @@ class Pack:
 #        max_food = max(np.array(M.tilemap)[np.ix_(tmp)])
         if self.alive:
             self.move(np.random.randint(5)-2,np.random.randint(5)-2)
-            
-        
+                    
     def fight(self, p, print_output=False):
         self_throws = np.random.randint(DICE, size = self.population*int(self.size))
         defenders_throws = np.random.randint(DICE, size = int(p.population*p.size))
@@ -219,18 +220,7 @@ class Pack:
         if print_output:
             print('Group {} lost {} members'.format(p.id,dp ))
         p.change_population(-dp)
-       
-    def freeze(self):
-        temperature = M.tilemap[self.x][self.y].tile_type.temperature
-        freeze_throw = np.random.rand(self.population)
-        if self.fur == FUR[0] and temperature < FREEZE_TEMPS[0]:
-            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
-        if self.fur == FUR[1] and temperature < FREEZE_TEMPS[1]:
-            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
-        if self.fur == FUR[2] and temperature < FREEZE_TEMPS[2]:
-            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
-            
-    
+        
     def fight_or_flight(self, pack, print_output=False):
         decision_throw = np.random.rand()
         if self.aggressiveness == 0.0:
@@ -241,6 +231,16 @@ class Pack:
             self.fight(pack,NOTIFICATIONS)
         elif print_output:
             print('Groups go in opposite directions')
+       
+    def freeze(self):
+        temperature = M.tilemap[self.x][self.y].tile_type.temperature
+        freeze_throw = np.random.rand(self.population)
+        if self.fur == FUR[0] and temperature < FREEZE_TEMPS[0]:
+            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
+        if self.fur == FUR[1] and temperature < FREEZE_TEMPS[1]:
+            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
+        if self.fur == FUR[2] and temperature < FREEZE_TEMPS[2]:
+            self.change_population(-sum(freeze_throw < FREEZE_CHANCE))
             
     def count_food_intake(self):
         fur_modifier = 1.0
@@ -291,6 +291,7 @@ class Pack:
     def die(self):
         if NOTIFICATIONS:
             print('Pack {} died'.format(self.id))
+        M.tilemap[self.x][self.y].meat += self.starting_population
         self.indicator = 'k+'
         self.alive = False
          

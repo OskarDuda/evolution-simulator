@@ -48,20 +48,19 @@ def geographic_tilemap_generator_by_temp(x_size, y_size):
     for t in TILE_TYPES:
         a.append(t.temperature) 
     base = 1.1 
-    step = (max(a)-min(a))/y_size
+    step = (max(a)-min(a))/x_size
     r =[]
-    i = max(a)
-    tmp = []
     for i1 in range(x_size):
-        a_roul = np.cumsum(a)*((1/base) ** (np.square((np.array(a) - i*np.ones(len(a))))))
-        v = []
+        r.append([])
         for i2 in range(y_size):
-            ran = np.random.rand()
-            indic = sum(a_roul > ran)-1
-            v.append(Tile(tt=TILE_TYPES[indic],x=i1,y=i2))
-        r.append(v)
-        tmp.append(i)
-        i -= step
+            r[i1].append(TILE_TYPES[0])
+    m = max(a)
+    for i1 in range(y_size):
+        a_roul = np.cumsum(a)*((1/base) ** (np.square((np.array(a) - m*np.ones(len(a))))))
+        for i2 in range(x_size):
+            indic = sum(a_roul > np.random.rand())-1
+            r[i2][i1] = Tile(tt=TILE_TYPES[indic],x=i2,y=i1)
+        m -= step
     return r
 
 t1 = Tile_type(id='desert',temperature=40.0)
@@ -74,4 +73,5 @@ t1 = Tile_type(id='meadows', plants_inc=0.3, meat_inc=0.1, temperature=25.0)
 t1 = Tile_type(id='polar', temperature=-10.0)
 t1 = Tile_type(id='tundra', plants_inc=0.1, temperature=-10.0)
 
-M = Map(100,150,geographic_tilemap_generator_by_temp)
+
+M = Map(150,100,geographic_tilemap_generator_by_temp)
