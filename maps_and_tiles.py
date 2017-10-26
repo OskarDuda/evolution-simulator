@@ -21,6 +21,7 @@ class Tile:
         self.x = x
         self.y = y
         self.packs = []
+        
     def __repr__(self):
         return 'A tile of {}, with {} edible plants and {} meat'.format(self.tile_type.id,self.plants,self.meat)
         
@@ -73,4 +74,4 @@ t1 = Tile_type(id='meadows', plants_inc=0.3, meat_inc=0.1, temperature=25.0)
 t1 = Tile_type(id='polar', temperature=-10.0)
 t1 = Tile_type(id='tundra', plants_inc=0.1, temperature=-10.0)
 
-M = Map(50,50,geographic_tilemap_generator_by_temp)
+M = Map(350,350,geographic_tilemap_generator_by_temp)

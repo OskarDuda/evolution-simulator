@@ -16,8 +16,18 @@ SPECIES_LIST = []
 FREEZE_TEMPS = [25,5,-5]
 FREEZE_CHANCE = 0.1
 TMP = 0 #variable for debugging
-DEFAULT_PACK = { 'species':'Xarz', 'id':'', 'food':0, 'pop':1, 'fur':0, 'aggressiveness':0, 'satiety':0.0, 'size':1, 'territory_size':1, 'x':0, 'y':0, 'indicator':'g*'}
+DEFAULT_PACK = { 'species':'Xarz', 
+                'id':'', 'food':0, 
+                'pop':1, 'fur':0, 
+                'aggressiveness':0, 
+                'satiety':0.0, 
+                'size':1, 
+                'territory_size':1, 
+                'x':0, 
+                'y':0, 
+                'indicator':'g*'}
 
+#Species groups packs with common genes
 class Species:
     def __init__(self, name):
         self.name = name
@@ -33,7 +43,8 @@ class Species:
     def make_pck_names(self):
         tmp = Pack(self)
         self.packs_list.remove(tmp)
-        return [a for a in dir(tmp) if (not a.startswith('__') and not callable(getattr(tmp,a)))]
+        return [a for a in dir(tmp) if (not a.startswith('__') and 
+                               not callable(getattr(tmp,a)))]
         
         
     def new_generation(self):
@@ -41,26 +52,6 @@ class Species:
         survivors = [p for p in self.packs_list if p.alive]
         
         #crossover 
-        def f_big(v): #crossover of attributes that can get higher than 1.0
-            i = 0
-            r = np.zeros(len(v))
-            while i < len(v):
-                tmp = gen.crossover(v[i-1],v[i],CROSS_BIG_CONST)
-                r[i-1] = tmp[0]
-                r[i] = tmp[1]
-                i += 1
-            return list(r)
-        
-        def f_small(v): #crossover of attributes from range 0:1
-            i = 0
-            r = np.zeros(len(v))
-            while i < len(v):
-                tmp = gen.crossover(v[i-1],v[i],CROSS_SMALL_CONST)
-                r[i-1] = tmp[0]
-                r[i] = tmp[1]
-                i += 1
-            return list(r)
-        
         d = {} #creating dictionary of all attribute values of all packs in the species - syntax is {'attr_name':[pack1.value,pack2_value,...],...}
         for attr in self.pack_attributes_names:
               d[attr] = []
@@ -69,76 +60,47 @@ class Species:
                 d[attr].append(getattr(pck,attr))
         
         new_values = {} #creates a similar dictionary to d, with new attribute values
-        if d['x']:
+        if d['x']: #checks if any pack has survived
             for key in d:
-                print(d)
-                if key in ['alive' , 'food', 'food_intake', 'fur', 'id', 'satiety', 'species', 'x', 'y','indicator']: #these are attributes that are not passed through genetics
+#                print(d)
+                if key in ['alive', #these are attributes that are not modified through genetics
+                           'food',
+                           'food_intake',
+                           'fur',
+                           'id',
+                           'satiety',
+                           'species',
+                           'x',
+                           'y',
+                           'indicator']: 
+                    print(d[key])
                     new_values[key] = d[key]
                 elif type(d[key][0]) == int or (type(d[key][0]) == float and max(d[key]) >= 1): #these attributes can be higher than 1.0
-                    new_values[key] = f_big(d[key])
+                    new_values[key] = gen.vector_crossover(d[key],CROSS_BIG_CONST)
                 elif type(d[key][0] == float): #these attributes are supposed to be from range 0:1
-                    new_values[key] = f_small(d[key])
+                    new_values[key] = gen.vector_crossover(d[key],CROSS_SMALL_CONST)
                 else:
                     new_values[key] = d[key] #for bug avoidance all attributes not listed above stay unchanged in the crossover phase
-        else:
+        else: #if no pack has survived, generate a default pack
             for key in sp1.pack_attributes_names:
-                d[key] = DEFAULT_PACK[key]
+                new_values[key] = DEFAULT_PACK[key]
             
             
         #mutation
-        def mut_float(a, dev): #returns gaussian distribution of values with std deviation equal to dev, concentrated around value from a
-            return gen.mutation(a, dev)
-        
-        def mut_int(a,chance): #changes values in a by 1 with possibility equal to chance
-            if hasattr(a,'__len__'):
-                n = len(a)
-                sgn = np.random.randint(2,size=n)
-                sgn = [2*x-1 for x in sgn]
-                decider = np.random.rand(n)<chance
-                b = np.array(a)
-                b[decider] += sgn[decider]
-                return list(b)
-            else:
-                n = 1
-                sgn = np.random.randint(2)
-                sgn = 2*sgn - 1
-                b = a
-                if np.random.rand()<chance:
-                    b = a + sgn
-            
-            
-            
-        def mut_cat(a,chance,category): #changes values in a into neighbouring value from category
-            
-            if hasattr(a,'__len__'):
-                n = len(a)
-                sgn = np.random.randint(2,size=n)
-                sgn = [2*x-1 for x in sgn]
-                decider = np.random.rand(n) < chance
-                for i in range(n):
-                    if decider[i]:
-                        b[i]=category[category.index(a[i])+sgn[i]]
-                return list(b)
-            else:
-                if np.random.rand() < chance:
-                    sgn = 2*np.random.randint(2)-1
-                    b = category[category.index(a)+sgn]
-                return b
-                    
         for key in new_values:
             if new_values[key] in ['food','fur']:
-                new_values[key] = mut_cat(new_values[key],LOW_MUTATION_CONST,CATEGORY_TRANSLATOR[key])
+                new_values[key] = gen.mutate_cat(new_values[key],LOW_MUTATION_CONST,CATEGORY_TRANSLATOR[key])
             elif new_values[key] in ['size','starting_population','territory_size']:
-                new_values[key] = mut_int(new_values[key],HIGH_MUTATION_CONST)
+                new_values[key] = gen.mutate_int(new_values[key],HIGH_MUTATION_CONST)
             elif new_values[key] in ['aggressiveness']:
-                new_values[key] = mut_float(new_values[key],HIGH_MUTATION_CONST)
+                new_values[key] = gen.mutate_float(new_values[key],HIGH_MUTATION_CONST)
         
                 
 
         #new generation
         for pck in self.packs_list: #swaps attributes of old packs with new generation's attributes
             i = 0
-            print(len(new_values))
+#            print(len(new_values))
             for key in new_values:
                 setattr(pck, key, new_values[key][i])
             i+=1
@@ -155,9 +117,11 @@ class Species:
             v.append(food_translator(s.food))
         
         
-    
+# A pack is a representative of a certain species    
 class Pack:
-    def __init__(self, sp, id='', food=0, pop=1, fur=0, aggressiveness=0, satiety=0.0, size=1, territory_size=1, x=0, y=0, indicator='g*'):
+    def __init__(self, sp, id='', food=0, pop=1, fur=0, aggressiveness=0, 
+                 satiety=0.0, size=1, territory_size=1, x=0, y=0, 
+                 indicator='g*'):
         self.species = sp #Species of animals in the pack
         if not id:
             self.id = sp.name+str(len(sp.packs_list)+1) #ID speaks for itself
