@@ -63,30 +63,34 @@ for species in SPECIES_LIST:
 
 #window(100, 100, M.x_size, M.y_size, 'Map', M_temp)
     
-
-n = 3
+v_statistics = []
+n = 30
 year = 0
+fig = plt.figure()
+ax1 = plt.subplot(211)
+ax2 = plt.subplot(212)
 while(True):
     for day in range(n):
         M.generate_food()
-        x_list = []
-        y_list = []
-        plt.figure(1)
         plt.subplot(211)
+        ax1.title.set_text('Map')
+        tmp = [] #vector of all packs' feature_to_plot values
         for species in SPECIES_LIST:
             for pack in species.packs_list:
-                x_list.append(pack.x)
-                y_list.append(pack.y)
-                pack.decide_movement()
-                pack.get_hungry()
-                pack.freeze()
-                pack.eat()
+                #pack lifecycle
+                pack.cycle()
+                
+                #gather statistical data on all packs
+                tmp.append(getattr(pack,feature_to_plot))
+                
                 plt.plot(pack.x, pack.y,pack.indicator) 
             species.count_survivors()
         
-#        fig = plt.plot(x_list,y_list,'k*')
         plt.imshow(M_temp, cmap='Oranges', interpolation = 'nearest')
+        v_statistics.append([max(tmp),np.median(tmp),min(tmp)])
         plt.subplot(212)
+        ax2.title.set_text(feature_to_plot)
+        plt.plot(v_statistics)
         plt.pause(0.01)
 #        plt.close
         plt.clf()

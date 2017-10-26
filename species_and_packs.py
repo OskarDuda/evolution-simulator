@@ -2,7 +2,7 @@ import numpy as np
 import genetic as gen
 from maps_and_tiles import *
 
-DICE = 20
+DICE = 6
 VORES = ['Carnivore', 'Omnivore', 'Herbivore']
 FUR = ['None','Short','Long']
 CATEGORY_TRANSLATOR = {'fur':FUR,'food':VORES}
@@ -10,11 +10,11 @@ NOTIFICATIONS = False
 BREEDING_PACE = 10
 CROSS_BIG_CONST = 3 #crossover constant for attributes which can be higher than 1
 CROSS_SMALL_CONST = 0.35 #has to be in range 0:1
-HIGH_MUTATION_CONST = 0.2 #mutation chance for highly mutable attributes like size
+HIGH_MUTATION_CONST = 0.07 #mutation chance for highly mutable attributes like size
 LOW_MUTATION_CONST = 0.001 #mutation chance for lowly mutable attributes like type of food
 SPECIES_LIST = []
 FREEZE_TEMPS = [25,5,-5]
-FREEZE_CHANCE = 0.1
+FREEZE_CHANCE = 0.03
 TMP = 0 #variable for debugging
 DEFAULT_PACK = { 'species':'Xarz', 
                 'id':'', 'food':0, 
@@ -59,8 +59,6 @@ class Species:
         for pck in self.survivors:
             for attr in self.pack_attributes_names:
                 d[attr].append(getattr(pck,attr))
-        if d['id'][0] == d['id'][1]:
-            print('line 64')
             
         new_values = {} #creates a similar dictionary to d, with new attribute values
         if d['x']: #checks if any pack has survived
@@ -98,10 +96,10 @@ class Species:
                 new_values[key] = gen.mutate_float(new_values[key],HIGH_MUTATION_CONST)
         
                 
-
+        i = 0
         #new generation
         for pck in self.packs_list: #swaps attributes of old packs with new generation's attributes
-            i = 0
+
 #            print(len(new_values))
             for key in new_values:
                 setattr(pck, key, new_values[key][i])
@@ -162,12 +160,18 @@ class Pack:
         self.count_food_intake()
         self.alive = True #Tells if the pack is alive
         M.tilemap[self.x][self.y].packs.append(self)
-        self.indicator='g*' #FOR FUTURE IMPLEMENTATION how the pack is indicated on the map
+        self.indicator=indicator
         
         sp.packs_list.append(self)
     
     def __repr__(self):
         return 'A pack of {} {}, at x:{} y:{}, generation:{}'.format(self.population,self.species.name,self.x,self.y,self.species.generation)
+    
+    def cycle(self):
+        self.decide_movement()
+        self.get_hungry()
+        self.freeze()
+        self.eat()
     
     def move(self, dx, dy):
         if self.x+dx>=0  and self.x+dx<M.x_size and self.y+dy>=0 and self.y+dy<M.y_size:

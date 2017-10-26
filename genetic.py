@@ -64,5 +64,6 @@ def mutate_cat(a,chance,category): #changes values in a into neighbouring value 
             return category[category.index(a)+2*np.random.randint(2)-1]
         else:
             return a
+        
 
 #def selection FOR LATER IMPLEMENTATION
