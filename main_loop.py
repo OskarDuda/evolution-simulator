@@ -83,7 +83,8 @@ while(True):
         
         plt.imshow(M_temp, cmap='Oranges', interpolation = 'nearest')
         plt.subplot(212)
-        plt.plot(v_statistics)
+        vplt = plt.plot(v_statistics)
+        plt.legend(vplt, ('Max','Median','Min'))
         ax1.title.set_text('Map')
         ax2.title.set_text(feature_to_plot)
         plt.show
